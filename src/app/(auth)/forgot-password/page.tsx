@@ -5,52 +5,49 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Mail, Lock } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
-import { useI18n } from "@/lib/i18n/context";
 
-export default function LoginPage() {
+export default function ForgotPasswordPage() {
   const router = useRouter();
-  const { t } = useI18n();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error(t.auth.login.errors.emptyFields);
-      return;
-    }
+    if (!email) return;
 
     setLoading(true);
-
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
       });
 
-      if (error) throw error;
+      const data = await res.json().catch(() => ({}));
 
-      if (data.user) {
-        toast.success(t.auth.login.success);
-        router.push("/admin");
-        router.refresh();
+      if (res.status === 429) {
+        toast.error(
+          data?.message ??
+            "Too many requests. Please wait a few minutes and try again."
+        );
+      } else {
+        toast.success(
+          "If an account exists for this email, a reset link has been sent."
+        );
+        setSubmitted(true);
       }
-    } catch (err: any) {
-      console.error("Login error:", err);
-      const errorMessage =
-        err.message === "Invalid login credentials"
-          ? t.auth.login.errors.invalidCredentials
-          : err.message || t.auth.login.errors.genericError;
-      toast.error(errorMessage);
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      toast.error("Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,15 +55,14 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center p-4 lg:p-8">
-      {/* Centered Card with Split Layout */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
         className="w-full max-w-5xl overflow-hidden rounded-2xl border border-border/50 bg-card shadow-xl dark:shadow-2xl"
       >
-        <div className="flex min-h-[600px] flex-col lg:flex-row">
-          {/* Left Side - Form Section (50%) */}
+        <div className="flex min-h-[520px] flex-col lg:flex-row">
+          {/* Left - Form */}
           <div className="flex w-full flex-col justify-center bg-card p-8 lg:w-[50%] lg:p-12">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -74,25 +70,23 @@ export default function LoginPage() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="mx-auto w-full max-w-md space-y-6"
             >
-              {/* Title */}
               <div className="space-y-2">
                 <h1 className="text-3xl font-bold text-foreground font-serif">
-                  {t.auth.login.title}
+                  Forgot password
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  {t.auth.login.subtitle}
+                  Enter the email associated with your account and we&apos;ll
+                  send you a secure link to reset your password.
                 </p>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleLogin} className="space-y-5">
-                {/* Email Field */}
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <Label
                     htmlFor="email"
                     className="text-sm font-medium text-foreground"
                   >
-                    {t.auth.login.emailLabel}
+                    Email address
                   </Label>
                   <div className="relative">
                     <Mail
@@ -106,7 +100,7 @@ export default function LoginPage() {
                     <Input
                       id="email"
                       type="email"
-                      placeholder={t.auth.login.emailPlaceholder}
+                      placeholder="you@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={() => setFocusedField("email")}
@@ -117,61 +111,15 @@ export default function LoginPage() {
                           : "border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
                       }`}
                       required
-                      disabled={loading}
+                      disabled={loading || submitted}
                       autoComplete="email"
                     />
                   </div>
                 </div>
 
-                {/* Password Field */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label
-                      htmlFor="password"
-                      className="text-sm font-medium text-foreground"
-                    >
-                      {t.auth.login.passwordLabel}
-                    </Label>
-                    <Link
-                      href="/forgot-password"
-                      className="text-xs font-medium text-primary transition-colors hover:text-primary/80"
-                    >
-                      {t.auth.login.forgotPassword}
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Lock
-                      size={16}
-                      className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${
-                        focusedField === "password"
-                          ? "text-primary"
-                          : "text-muted-foreground"
-                      }`}
-                    />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder={t.auth.login.passwordPlaceholder}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      onFocus={() => setFocusedField("password")}
-                      onBlur={() => setFocusedField(null)}
-                      className={`h-12 rounded-xl border bg-background pl-10 pr-4 text-foreground placeholder:text-muted-foreground transition-all ${
-                        focusedField === "password"
-                          ? "border-primary ring-2 ring-primary/20"
-                          : "border-border focus:border-primary focus:ring-2 focus:ring-primary/20"
-                      }`}
-                      required
-                      disabled={loading}
-                      autoComplete="current-password"
-                    />
-                  </div>
-                </div>
-
-                {/* Submit Button */}
                 <Button
                   type="submit"
-                  disabled={loading || !email || !password}
+                  disabled={loading || !email || submitted}
                   className="h-12 w-full rounded-xl bg-gradient-to-r from-[#C6A75E] to-[#B8964A] font-semibold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed dark:from-[#D4AF37] dark:to-[#C6A75E]"
                 >
                   <AnimatePresence mode="wait">
@@ -184,8 +132,17 @@ export default function LoginPage() {
                         className="flex items-center justify-center gap-2"
                       >
                         <Loader2 size={18} className="animate-spin" />
-                        <span>{t.auth.login.submitButton}...</span>
+                        <span>Sending link...</span>
                       </motion.div>
+                    ) : submitted ? (
+                      <motion.span
+                        key="submitted"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                      >
+                        Check your email
+                      </motion.span>
                     ) : (
                       <motion.span
                         key="default"
@@ -193,27 +150,32 @@ export default function LoginPage() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                       >
-                        {t.auth.login.submitButton}
+                        Send reset link
                       </motion.span>
                     )}
                   </AnimatePresence>
                 </Button>
 
-                {/* Sign Up Link */}
+                <p className="text-center text-xs text-muted-foreground">
+                  For security, we always respond with the same message, even if
+                  the email is not registered.
+                </p>
+
                 <p className="text-center text-sm text-muted-foreground">
-                  {t.auth.login.noAccount}{" "}
-                  <Link
-                    href="/signup"
+                  Remember your password?{" "}
+                  <button
+                    type="button"
+                    onClick={() => router.push("/login")}
                     className="font-medium text-primary transition-colors hover:text-primary/80"
                   >
-                    {t.auth.login.signUpLink}
-                  </Link>
+                    Back to login
+                  </button>
                 </p>
               </form>
             </motion.div>
           </div>
 
-          {/* Right Side - Image Panel (50%) */}
+          {/* Right - Imagery */}
           <div className="relative hidden w-full overflow-hidden lg:block lg:w-[50%]">
             <motion.div
               animate={{
@@ -228,7 +190,7 @@ export default function LoginPage() {
             >
               <Image
                 src="/images/image1.jpg"
-                alt="Restaurant ambiance"
+                alt="Elegant restaurant interior"
                 fill
                 className="object-cover"
                 priority
@@ -241,20 +203,22 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="space-y-6"
+                className="space-y-4"
               >
                 <h2 className="text-4xl font-bold text-white font-serif">
-                  {t.auth.login.panelGreeting}
+                  Secure access, made simple.
                 </h2>
-                <p className="text-lg text-white/90 max-w-sm">
-                  {t.auth.login.panelDescription}
+                <p className="mx-auto max-w-sm text-base text-white/90">
+                  We use time-limited, single-use links to keep your
+                  DineEasy account safe while giving you a smooth recovery
+                  experience.
                 </p>
                 <Link href="/signup">
                   <Button
                     variant="outline"
                     className="border-2 border-white/50 bg-transparent px-8 py-6 text-base font-semibold text-white transition-all hover:bg-white/10 hover:border-white/70"
                   >
-                    {t.auth.login.panelButton}
+                    Create a new account
                   </Button>
                 </Link>
               </motion.div>
@@ -265,3 +229,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

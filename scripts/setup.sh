@@ -62,6 +62,9 @@ NEXT_PUBLIC_SUPABASE_URL=${api_url}
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${anon_key}
 SUPABASE_SERVICE_ROLE_KEY=${service_key}
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+RESEND_API_KEY=
+EMAIL_FROM=onboarding@resend.dev
 EOF
 
 echo -e "${GREEN}.env.local written successfully.${NC}"

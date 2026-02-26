@@ -69,6 +69,12 @@ SUPABASE_SERVICE_ROLE_KEY=$service_key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 "@
 
+$envContent += @"
+RESEND_API_KEY=
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+EMAIL_FROM=onboarding@resend.dev
+"@
+
 Set-Content -Path ".env.local" -Value $envContent -Encoding UTF8
 
 Write-Host ".env.local written successfully." -ForegroundColor Green
